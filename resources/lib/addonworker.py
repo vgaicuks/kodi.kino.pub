@@ -306,15 +306,17 @@ def play(id, title, video_data=None, info=None, art=None):
         stream_type=__settings__.getSetting("stream_type"),
         ask_quality=__settings__.getSetting("ask_quality")
     )
+    import web_pdb; web_pdb.set_trace()
     li = ExtendedListItem(
         title,
         path=url,
         info={"video": info},
         properties={"id": id},
         art={"poster": art},
-        subtitles=[subtitle["url"] for subtitle in video_data["subtitles"]]
+        subtitles=[subtitle["url"] for subtitle in video_data["subtitles"]],
+        setResumeTime=False
     )
-    player = Player(li)
+    player = Player(list_item=li)
     xbmcplugin.setResolvedUrl(request.handle, True, li)
     while player.is_playing:
         player.set_marktime()
@@ -415,7 +417,11 @@ def watching_movies():
             link = get_internal_link("view_episodes", id=item["id"])
             isdir = True
         else:
+            response = KinoPubClient("watching").get(data={"id": item["id"]})
+            watching_info = response["item"]["videos"][0]
             li.setProperty("isPlayable", "true")
+            li.setResumeTime(watching_info["time"], watching_info["duration"])
+            li.setInfo("video", {"duration": watching_info["duration"]})
             link = get_internal_link(
                 "play",
                 id=item["id"],
