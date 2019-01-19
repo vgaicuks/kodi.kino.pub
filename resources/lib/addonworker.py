@@ -63,6 +63,11 @@ def show_items(items, add_indexes=False):
                 "duration": watching_info["duration"],
                 "playcount": watching_info["status"],
             })
+            video_info = {
+                "time": watching_info["time"],
+                "duration": watching_info["duration"],
+                "playcount": watching_info["status"],
+            }
             link = get_internal_link(
                 "play",
                 id=item["id"],
@@ -244,13 +249,32 @@ def episodes(id):
             properties={"id": item["id"], "isPlayable": "true"},
             addContextMenuItems=True
         )
+        info = {
+            "episode": video["number"],
+            "time": watching_episode["time"],
+            "duration": watching_episode["duration"],
+            "playcount": video["watched"],
+            "mediatype": "episode"
+        }
+        video_data = {
+            'subtitles': episode.get('subtitles', []),
+            'files': []
+        }
+        url = get_mlink(
+            video,
+            quality=__settings__.getSetting("video_quality"),
+            stream_type=__settings__.getSetting("stream_type"),
+            ask_quality=__settings__.getSetting("ask_quality")
+        )
+
         link = get_internal_link(
             "play",
             id=item["id"],
             title=episode_title,
             video_data=json.dumps(video),
             video_info=json.dumps(info),
-            poster=item["posters"]["big"]
+            poster=item["posters"]["big"],
+            url=url
         )
         xbmcplugin.addDirectoryItem(request.handle, link, li, False)
     xbmcplugin.endOfDirectory(request.handle)
@@ -281,7 +305,8 @@ def season_episodes(id, season_number):
             "time": watching_episode["time"],
             "duration": watching_episode["duration"],
             "playcount": watching_episode["status"],
-            "mediatype": "episode"
+            "mediatype": "episode",
+            "title": episode["title"]
         })
         li = ExtendedListItem(
             episode_title,
@@ -294,20 +319,39 @@ def season_episodes(id, season_number):
         if watching_episode["status"] < 1 and not selectedEpisode:
             selectedEpisode = True
             li.select(selectedEpisode)
+        info = {
+            "season": season_number,
+            "episode": episode["number"],
+            "time": watching_episode["time"],
+            "duration": watching_episode["duration"],
+            "playcount": watching_episode["status"],
+            "mediatype": "episode"
+        }
+        video_data = {
+            'subtitles': episode.get('subtitles', []),
+            'files': []
+        }
+        url = get_mlink(
+            episode,
+            quality=__settings__.getSetting("video_quality"),
+            stream_type=__settings__.getSetting("stream_type"),
+            ask_quality=__settings__.getSetting("ask_quality")
+        )
         link = get_internal_link(
             "play",
             id=item["id"],
             title=episode_title,
-            video_data=json.dumps(episode),
             video_info=json.dumps(info),
-            poster=item["posters"]["big"]
+            video_data=json.dumps(video_data),
+            poster=item["posters"]["big"],
+            url=url,
         )
         xbmcplugin.addDirectoryItem(request.handle, link, li, False)
     xbmcplugin.endOfDirectory(request.handle)
 
 
 @route("/play")
-def play(id, title, video_info, video_data=None, poster=None):
+def play(id, title, video_info, video_data=None, poster=None, url=None):
     if not video_data:
         response = KinoPubClient("items/{}".format(id)).get()
         video_data = response["item"]["videos"][0]
@@ -317,12 +361,13 @@ def play(id, title, video_info, video_data=None, poster=None):
     if "files" not in video_data:
         notice("Видео обновляется и временно не доступно!", "Видео в обработке", time=8000)
         return
-    url = get_mlink(
-        video_data,
-        quality=__settings__.getSetting("video_quality"),
-        stream_type=__settings__.getSetting("stream_type"),
-        ask_quality=__settings__.getSetting("ask_quality")
-    )
+    if not url:
+        url = get_mlink(
+            video_data,
+            quality=__settings__.getSetting("video_quality"),
+            stream_type=__settings__.getSetting("stream_type"),
+            ask_quality=__settings__.getSetting("ask_quality")
+        )
     li = ExtendedListItem(
         title,
         path=url,
