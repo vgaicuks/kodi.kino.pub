@@ -257,7 +257,7 @@ def episodes(id):
             "mediatype": "episode"
         }
         video_data = {
-            'subtitles': episode.get('subtitles', []),
+            'subtitles': video.get('subtitles', []),
             'files': []
         }
         url = get_mlink(
@@ -271,7 +271,7 @@ def episodes(id):
             "play",
             id=item["id"],
             title=episode_title,
-            video_data=json.dumps(video),
+            video_data=json.dumps(video_data),
             video_info=json.dumps(info),
             poster=item["posters"]["big"],
             url=url
